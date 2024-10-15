@@ -2,6 +2,14 @@
 
 Welcome to the **React-ThreeJS EaselJS Drawing App** – a powerful tool for creating 2D and 3D visualizations! This app covers you whether you're looking to draw, manipulate shapes, or view objects in a 3D scene. Let's unleash your creativity! 🌐✨ This is the perfect boilerplate to kickstart your drawing projects with React, ThreeJS, and EaselJS! 🚀
 
+### 🎥 Demo Video
+
+https://github.com/user-attachments/assets/27ea7167-7dec-4ab3-911e-9e0686a1a496
+
+### 🌍 Live Demo
+
+https://react-threejs-easeljs.web.app/
+
 ## 🎯 Key Features
 
 - 🎨 **Draw Shapes:** Draw rectangles, circles, lines, and custom paths effortlessly with a click-and-drag interface.
