@@ -27,8 +27,12 @@ const getUpdatedShapeData = (shape: Shape) => {
       break
     case 'path':
       if (instance && updatedShape.points) {
+        updatedShape.x = 0
+        updatedShape.y = 0
+
         const dx = instance.x - shape.x
         const dy = instance.y - shape.y
+
         updatedShape.points = updatedShape.points.map(point => ({
           x: point.x + dx,
           y: point.y + dy,
@@ -42,7 +46,7 @@ const getUpdatedShapeData = (shape: Shape) => {
 
 export const exportShapes = (shapes: Shape[]) => {
   // Only export active shapes (not deleted)
-  const activeShapes = shapes.filter(shape => shape.instance && !shape.instance?.isDeleted)
+  const activeShapes = shapes.filter(shape => !shape.instance?.isDeleted)
   const exportedData = activeShapes.map(getUpdatedShapeData)
 
   try {
