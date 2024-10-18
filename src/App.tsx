@@ -102,7 +102,7 @@ const Canvas: React.FC = () => {
           const g = this.graphics
           g.clear()
             .beginStroke(props.strokeColor)
-            .setStrokeStyle(pathThickness)
+            .setStrokeStyle(props?.thickness ?? pathThickness)
             .moveTo(0, 0)
             .lineTo(props.endX - props.x, props.endY - props.y)
         } else if (props.type === 'path' && props.points) {
@@ -165,6 +165,11 @@ const Canvas: React.FC = () => {
     g.clear()
 
     const { x: startX, y: startY } = startPoint
+    let thickness = pathThickness
+
+    if (['line', 'path'].includes(shapeType) && currentShape?.graphics?._strokeStyle?.width) {
+      thickness = currentShape?.graphics?._strokeStyle?.width
+    }
 
     switch (shapeType) {
       case 'rectangle':
@@ -178,10 +183,10 @@ const Canvas: React.FC = () => {
         break
       }
       case 'line':
-        g.beginStroke(pathColor.current).setStrokeStyle(pathThickness).moveTo(startX, startY).lineTo(x, y)
+        g.beginStroke(pathColor.current).setStrokeStyle(thickness).moveTo(startX, startY).lineTo(x, y)
         break
       case 'path': {
-        const newPoints = g.beginStroke(pathColor.current).setStrokeStyle(pathThickness)
+        const newPoints = g.beginStroke(pathColor.current).setStrokeStyle(thickness)
 
         if (isEmpty(pathPointsRef.current)) {
           newPoints.moveTo(startX, startY)

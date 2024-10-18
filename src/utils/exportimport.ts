@@ -15,6 +15,7 @@ const getUpdatedShapeData = (shape: Shape) => {
     points: shape.points ? [...shape.points] : undefined,
     endX: shape.endX,
     endY: shape.endY,
+    thickness: shape.thickness,
   }
 
   switch (shape.type) {
