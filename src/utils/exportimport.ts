@@ -1,4 +1,5 @@
 import { Shape } from '../interfaces'
+import { defaultPathThickness } from './constants'
 
 const getUpdatedShapeData = (shape: Shape) => {
   const instance = shape.instance
@@ -14,6 +15,7 @@ const getUpdatedShapeData = (shape: Shape) => {
     points: shape.points ? [...shape.points] : undefined,
     endX: shape.endX,
     endY: shape.endY,
+    thickness: shape.thickness,
   }
 
   switch (shape.type) {
@@ -23,12 +25,19 @@ const getUpdatedShapeData = (shape: Shape) => {
         const dy = instance.y - shape.y
         updatedShape.endX = (shape.endX ?? 0) + dx
         updatedShape.endY = (shape.endY ?? 0) + dy
+        updatedShape.thickness ??= shape?.instance?._strokeStyle?.width || defaultPathThickness
       }
+
       break
     case 'path':
       if (instance && updatedShape.points) {
+        updatedShape.x = 0
+        updatedShape.y = 0
+        updatedShape.thickness ??= shape?.instance?._strokeStyle?.width || defaultPathThickness
+
         const dx = instance.x - shape.x
         const dy = instance.y - shape.y
+
         updatedShape.points = updatedShape.points.map(point => ({
           x: point.x + dx,
           y: point.y + dy,
@@ -42,7 +51,7 @@ const getUpdatedShapeData = (shape: Shape) => {
 
 export const exportShapes = (shapes: Shape[]) => {
   // Only export active shapes (not deleted)
-  const activeShapes = shapes.filter(shape => shape.instance && !shape.instance?.isDeleted)
+  const activeShapes = shapes.filter(shape => !shape.instance?.isDeleted)
   const exportedData = activeShapes.map(getUpdatedShapeData)
 
   try {

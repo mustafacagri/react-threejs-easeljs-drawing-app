@@ -5,20 +5,18 @@ import { getRandomColor } from './utils'
 // @ts-expect-error -> no support for EaselJS in TypeScript -> https://github.com/CreateJS/EaselJS/issues/796
 import { Stage, Shape, Ticker } from '@createjs/easeljs'
 import { Shape as ShapeInterface } from './interfaces'
-import { ShapeType } from './utils/constants'
+import { defaultPathThickness, ShapeType } from './utils/constants'
 import Sidebar from './components/Sidebar'
 import ThreeJSViewer from './components/ThreeJSViewer'
+import { isEmpty } from 'lodash'
 
 const Canvas: React.FC = () => {
-  const pathThickness = 25
-
+  const [pathThickness, setPathThickness] = useState(defaultPathThickness)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stageRef = useRef<Stage | null>(null)
   const [shapes, setShapes] = useState<ShapeInterface[]>([])
   const [selectedShape, setSelectedShape] = useState<ShapeInterface | null>(null)
   const [shapeType, setShapeType] = useState<ShapeType>('rectangle')
-  const [currentPath, setCurrentPath] = useState<Shape | null>(null)
-  const [pathPoints, setPathPoints] = useState<{ x: number; y: number }[]>([])
   const [isDrawing, setIsDrawing] = useState(false)
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null)
   const [currentShape, setCurrentShape] = useState<Shape | null>(null)
@@ -26,8 +24,11 @@ const Canvas: React.FC = () => {
   const pathColor = useRef(getRandomColor())
 
   const selectedIdRef = useRef<number | undefined>(undefined)
+  const pathPointsRef = useRef<{ x: number; y: number }[]>([])
 
   const toggleViewMode = () => setIs3DMode(!is3DMode)
+
+  const getStrokeThickness = (thickness?: number) => thickness ?? pathThickness
 
   // Function to handle shape creation
   const createShape = useCallback(
@@ -49,12 +50,13 @@ const Canvas: React.FC = () => {
           if (props.endX === undefined || props.endY === undefined) return
 
           g.beginStroke(props.strokeColor)
+            .setStrokeStyle(getStrokeThickness(props?.thickness))
             .moveTo(0, 0)
             .lineTo(props.endX - props.x, props.endY - props.y)
           break
         case 'path':
           if (props?.points && props.points?.length > 1) {
-            g.beginStroke(props.strokeColor).setStrokeStyle(pathThickness)
+            g.beginStroke(props.strokeColor).setStrokeStyle(getStrokeThickness(props?.thickness))
             g.moveTo(props.points[0].x, props.points[0].y)
 
             props.points.forEach((point: { x: number; y: number }, index: number) => {
@@ -102,6 +104,7 @@ const Canvas: React.FC = () => {
           const g = this.graphics
           g.clear()
             .beginStroke(props.strokeColor)
+            .setStrokeStyle(getStrokeThickness(props?.thickness))
             .moveTo(0, 0)
             .lineTo(props.endX - props.x, props.endY - props.y)
         } else if (props.type === 'path' && props.points) {
@@ -163,20 +166,38 @@ const Canvas: React.FC = () => {
     const g = currentShape.graphics
     g.clear()
 
+    const { x: startX, y: startY } = startPoint
+    let thickness = pathThickness
+
+    if (['line', 'path'].includes(shapeType) && currentShape?.graphics?._strokeStyle?.width) {
+      thickness = currentShape?.graphics?._strokeStyle?.width
+    }
+
     switch (shapeType) {
       case 'rectangle':
         g.beginFill(pathColor.current)
           .beginStroke(pathColor.current)
-          .drawRect(startPoint.x, startPoint.y, x - startPoint.x, y - startPoint.y)
+          .drawRect(startX, startY, x - startX, y - startY)
         break
       case 'circle': {
-        const radius = Math.sqrt(Math.pow(x - startPoint.x, 2) + Math.pow(y - startPoint.y, 2))
-        g.beginFill(pathColor.current).beginStroke(pathColor.current).drawCircle(startPoint.x, startPoint.y, radius)
+        const radius = Math.sqrt(Math.pow(x - startX, 2) + Math.pow(y - startY, 2))
+        g.beginFill(pathColor.current).beginStroke(pathColor.current).drawCircle(startX, startY, radius)
         break
       }
       case 'line':
-        g.beginStroke(pathColor.current).moveTo(startPoint.x, startPoint.y).lineTo(x, y)
+        g.beginStroke(pathColor.current).setStrokeStyle(thickness).moveTo(startX, startY).lineTo(x, y)
         break
+      case 'path': {
+        const newPoints = g.beginStroke(pathColor.current).setStrokeStyle(thickness)
+
+        if (isEmpty(pathPointsRef.current)) {
+          newPoints.moveTo(startX, startY)
+        } else {
+          pathPointsRef.current.forEach(point => newPoints.lineTo(point.x, point.y))
+        }
+
+        newPoints.lineTo(x, y)
+      }
     }
 
     stageRef.current?.update()
@@ -214,11 +235,12 @@ const Canvas: React.FC = () => {
         shapeProps = {
           type: 'line',
           fillColor: 'transparent',
-          strokeColor: getRandomColor(),
+          strokeColor: pathColor.current,
           x: startPoint.x,
           y: startPoint.y,
           endX: x,
           endY: y,
+          thickness: pathThickness,
         }
         break
       default:
@@ -233,57 +255,21 @@ const Canvas: React.FC = () => {
     stageRef.current?.update()
   }
 
-  const updatePath = (x: number, y: number) => {
-    if (currentPath && pathPoints.length > 0) {
-      const g = currentPath.graphics
-      g.clear().beginStroke(pathColor.current).setStrokeStyle(pathThickness)
-      g.moveTo(pathPoints[0].x, pathPoints[0].y)
-      g.lineTo(x, y) // Draw the latest line to the current mouse point
-
-      stageRef.current?.update() // Refresh stage
-    }
-  }
-
-  const endPath = (x: number, y: number) => {
-    if (currentPath && pathPoints.length > 0) {
-      const newPoints = [...pathPoints, { x, y }]
-
-      createShape({
-        type: 'path',
-        fillColor: 'transparent',
-        strokeColor: pathColor.current,
-        x: 0,
-        y: 0,
-        points: newPoints,
-      })
-
-      stageRef.current?.removeChild(currentPath)
-      setPathPoints([])
-      setCurrentPath(null)
-      setIsDrawing(false)
-      stageRef.current?.update()
-    }
-  }
-
   // Mouse event handlers
   const handleCanvasMouseDown = useCallback(
     (event: React.MouseEvent<HTMLCanvasElement>) => {
-      pathColor.current = getRandomColor()
-
+      if (!isDrawing) pathColor.current = getRandomColor()
       const { offsetX, offsetY } = event.nativeEvent
+
+      if (shapeType === 'path') {
+        pathPointsRef.current.push({ x: offsetX, y: offsetY })
+      }
+
       const clickedShape = stageRef.current?.getObjectsUnderPoint(offsetX, offsetY, 1)?.[0] as ShapeInterface
 
       if (clickedShape) {
         selectedIdRef.current = clickedShape?.id as number
-
         setSelectedShape(clickedShape)
-      } else if (shapeType === 'path') {
-        if (!isDrawing) {
-          startPath(offsetX, offsetY)
-        } else {
-          endPath(offsetX, offsetY)
-          startPath(offsetX, offsetY)
-        }
       } else {
         startDrawing(offsetX, offsetY)
       }
@@ -296,11 +282,7 @@ const Canvas: React.FC = () => {
       const { offsetX, offsetY } = event.nativeEvent
 
       if (isDrawing) {
-        if (shapeType === 'path') {
-          updatePath(offsetX, offsetY)
-        } else {
-          draw(offsetX, offsetY)
-        }
+        draw(offsetX, offsetY)
       }
     },
     [isDrawing, shapeType]
@@ -312,7 +294,7 @@ const Canvas: React.FC = () => {
 
       if (isDrawing) {
         if (shapeType === 'path') {
-          endPath(offsetX, offsetY)
+          pathPointsRef.current = [...pathPointsRef.current, { x: offsetX, y: offsetY }]
         } else {
           endDrawing(offsetX, offsetY)
         }
@@ -338,16 +320,6 @@ const Canvas: React.FC = () => {
     },
     [isDrawing, shapeType]
   )
-
-  const startPath = (x: number, y: number) => {
-    const newPath = new Shape()
-    newPath.graphics.beginStroke(pathColor.current).setStrokeStyle(pathThickness)
-    stageRef.current?.addChild(newPath)
-
-    setCurrentPath(newPath)
-    setPathPoints([{ x, y }])
-    setIsDrawing(true) // Ensure we are in drawing mode
-  }
 
   // Initialize canvas and attach event handlers
   useEffect(() => {
@@ -380,9 +352,8 @@ const Canvas: React.FC = () => {
 
     setShapes([])
     setSelectedShape(null)
-    setCurrentPath(null)
-    setPathPoints([])
     setIsDrawing(false)
+    pathPointsRef.current = []
   }, [])
 
   // Keyboard delete, backspace handlers
@@ -411,18 +382,34 @@ const Canvas: React.FC = () => {
       event.preventDefault()
 
       if (isDrawing) {
+        if (shapeType === 'path' && Array.isArray(pathPointsRef.current) && pathPointsRef.current.length > 1) {
+          const current = {
+            type: 'path',
+            fillColor: pathColor.current,
+            strokeColor: pathColor.current,
+            x: 0,
+            y: 0,
+            points: pathPointsRef.current,
+            instance: stageRef.current?.children[stageRef.current?.children.length - 1] as Shape,
+            thickness: pathThickness,
+          }
+
+          stageRef.current?.removeChild(currentShape)
+          stageRef.current?.update()
+
+          createShape({
+            ...current,
+          })
+
+          pathPointsRef.current = []
+          setStartPoint(null)
+        }
+
         setIsDrawing(false)
-        setCurrentPath(null)
-        setPathPoints([])
       }
     }
 
     window.addEventListener('contextmenu', handleRightClick)
-
-    if (!isDrawing) {
-      setCurrentPath(null)
-      setPathPoints([])
-    }
 
     return () => {
       window.removeEventListener('contextmenu', handleRightClick)
@@ -430,9 +417,7 @@ const Canvas: React.FC = () => {
   }, [isDrawing])
 
   useEffect(() => {
-    if (shapeType !== 'path') {
-      setIsDrawing(false)
-    }
+    setIsDrawing(false)
   }, [shapeType])
 
   return (
@@ -446,6 +431,8 @@ const Canvas: React.FC = () => {
           shapeType={shapeType}
           toggleViewMode={toggleViewMode}
           is3DMode={is3DMode}
+          pathThickness={pathThickness}
+          setPathThickness={setPathThickness}
         />
         <div
           id='CanvasContainer'

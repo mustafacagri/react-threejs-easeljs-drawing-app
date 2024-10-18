@@ -1,6 +1,6 @@
 import { importShapes, exportShapes } from '../utils/exportimport'
 import { isEmpty } from 'lodash'
-import { shapeList } from '../utils/constants'
+import { defaultPathThickness, shapeList } from '../utils/constants'
 import { SidebarProps } from '../interfaces'
 import Button from './ui/Button'
 
@@ -12,11 +12,18 @@ export default function Sidebar({
   shapeType,
   toggleViewMode,
   is3DMode,
+  pathThickness,
+  setPathThickness,
 }: Readonly<SidebarProps>) {
   const importFunc = (event: React.ChangeEvent<HTMLInputElement>) => {
     importShapes({ event, createShape, clearShapes })
   }
 
+  const setThickness = (thickness: number) => {
+    if (thickness < 1 || isNaN(thickness)) thickness = defaultPathThickness
+
+    setPathThickness(thickness)
+  }
   const iconList = ['rectangle', 'circle', 'horizontal_rule', 'route']
 
   return (
@@ -34,6 +41,19 @@ export default function Sidebar({
                   <span className='material-icons mr-2'>{iconList[index]}</span>
                   {type.charAt(0).toUpperCase() + type.slice(1)}
                 </Button>
+
+                {['line', 'path'].includes(type) && shapeType === type && (
+                  <div className='w-full my-4 flex items-center justify-between'>
+                    <span className='text-gray-500 text-xs'>Path thickness:</span>
+                    <input
+                      type='number'
+                      value={pathThickness}
+                      onChange={e => setThickness(Number(e.target.value))}
+                      className='p-2 border border-gray-200 rounded-md focus:outline-none focus:shadow-outline w-32'
+                      placeholder='Path thickness'
+                    />
+                  </div>
+                )}
               </li>
             ))}
           </ul>
