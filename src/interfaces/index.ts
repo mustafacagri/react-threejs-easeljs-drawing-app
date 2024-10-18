@@ -16,6 +16,7 @@ export interface Shape {
   endY?: number
   graphics?: any
   instance?: any
+  thickness?: number
 }
 
 export interface SidebarProps {
@@ -26,4 +27,6 @@ export interface SidebarProps {
   shapeType: string
   toggleViewMode: () => void
   is3DMode: boolean
+  pathThickness: number
+  setPathThickness: (thickness: number) => void
 }

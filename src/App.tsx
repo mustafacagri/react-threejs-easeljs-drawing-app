@@ -5,14 +5,13 @@ import { getRandomColor } from './utils'
 // @ts-expect-error -> no support for EaselJS in TypeScript -> https://github.com/CreateJS/EaselJS/issues/796
 import { Stage, Shape, Ticker } from '@createjs/easeljs'
 import { Shape as ShapeInterface } from './interfaces'
-import { ShapeType } from './utils/constants'
+import { defaultPathThickness, ShapeType } from './utils/constants'
 import Sidebar from './components/Sidebar'
 import ThreeJSViewer from './components/ThreeJSViewer'
 import { isEmpty } from 'lodash'
 
 const Canvas: React.FC = () => {
-  const pathThickness = 25
-
+  const [pathThickness, setPathThickness] = useState(defaultPathThickness)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stageRef = useRef<Stage | null>(null)
   const [shapes, setShapes] = useState<ShapeInterface[]>([])
@@ -49,12 +48,13 @@ const Canvas: React.FC = () => {
           if (props.endX === undefined || props.endY === undefined) return
 
           g.beginStroke(props.strokeColor)
+            .setStrokeStyle(props?.thickness ?? pathThickness)
             .moveTo(0, 0)
             .lineTo(props.endX - props.x, props.endY - props.y)
           break
         case 'path':
           if (props?.points && props.points?.length > 1) {
-            g.beginStroke(props.strokeColor).setStrokeStyle(pathThickness)
+            g.beginStroke(props.strokeColor).setStrokeStyle(props?.thickness ?? pathThickness)
             g.moveTo(props.points[0].x, props.points[0].y)
 
             props.points.forEach((point: { x: number; y: number }, index: number) => {
@@ -102,6 +102,7 @@ const Canvas: React.FC = () => {
           const g = this.graphics
           g.clear()
             .beginStroke(props.strokeColor)
+            .setStrokeStyle(pathThickness)
             .moveTo(0, 0)
             .lineTo(props.endX - props.x, props.endY - props.y)
         } else if (props.type === 'path' && props.points) {
@@ -177,7 +178,7 @@ const Canvas: React.FC = () => {
         break
       }
       case 'line':
-        g.beginStroke(pathColor.current).moveTo(startX, startY).lineTo(x, y)
+        g.beginStroke(pathColor.current).setStrokeStyle(pathThickness).moveTo(startX, startY).lineTo(x, y)
         break
       case 'path': {
         const newPoints = g.beginStroke(pathColor.current).setStrokeStyle(pathThickness)
@@ -227,11 +228,12 @@ const Canvas: React.FC = () => {
         shapeProps = {
           type: 'line',
           fillColor: 'transparent',
-          strokeColor: getRandomColor(),
+          strokeColor: pathColor.current,
           x: startPoint.x,
           y: startPoint.y,
           endX: x,
           endY: y,
+          thickness: pathThickness,
         }
         break
       default:
@@ -249,12 +251,11 @@ const Canvas: React.FC = () => {
   // Mouse event handlers
   const handleCanvasMouseDown = useCallback(
     (event: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!isDrawing) pathColor.current = getRandomColor()
       const { offsetX, offsetY } = event.nativeEvent
 
       if (shapeType === 'path') {
         pathPointsRef.current.push({ x: offsetX, y: offsetY })
-      } else {
-        pathColor.current = getRandomColor()
       }
 
       const clickedShape = stageRef.current?.getObjectsUnderPoint(offsetX, offsetY, 1)?.[0] as ShapeInterface
@@ -383,6 +384,7 @@ const Canvas: React.FC = () => {
             y: 0,
             points: pathPointsRef.current,
             instance: stageRef.current?.children[stageRef.current?.children.length - 1] as Shape,
+            thickness: pathThickness,
           }
 
           stageRef.current?.removeChild(currentShape)
@@ -422,6 +424,8 @@ const Canvas: React.FC = () => {
           shapeType={shapeType}
           toggleViewMode={toggleViewMode}
           is3DMode={is3DMode}
+          pathThickness={pathThickness}
+          setPathThickness={setPathThickness}
         />
         <div
           id='CanvasContainer'

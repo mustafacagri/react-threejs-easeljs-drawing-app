@@ -1,4 +1,5 @@
 import { Shape } from '../interfaces'
+import { defaultPathThickness } from './constants'
 
 const getUpdatedShapeData = (shape: Shape) => {
   const instance = shape.instance
@@ -23,12 +24,15 @@ const getUpdatedShapeData = (shape: Shape) => {
         const dy = instance.y - shape.y
         updatedShape.endX = (shape.endX ?? 0) + dx
         updatedShape.endY = (shape.endY ?? 0) + dy
+        updatedShape.thickness ??= shape?.instance?._strokeStyle?.width || defaultPathThickness
       }
+
       break
     case 'path':
       if (instance && updatedShape.points) {
         updatedShape.x = 0
         updatedShape.y = 0
+        updatedShape.thickness ??= shape?.instance?._strokeStyle?.width || defaultPathThickness
 
         const dx = instance.x - shape.x
         const dy = instance.y - shape.y

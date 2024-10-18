@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { Shape as ShapeInterface } from '../interfaces'
+import { defaultPathThickness } from '../utils/constants'
 
 interface ThreeJSViewerProps {
   shapes: ShapeInterface[]
@@ -49,6 +50,8 @@ const ThreeJSViewer: React.FC<ThreeJSViewerProps> = ({ shapes }) => {
       let material: THREE.Material
       let mesh: THREE.Mesh
 
+      const thickness = shape?.thickness ?? shape?.instance?._strokeStyle?.width ?? defaultPathThickness
+
       switch (shape.type) {
         case 'rectangle': {
           if (shape.width === undefined || shape.height === undefined) {
@@ -75,7 +78,7 @@ const ThreeJSViewer: React.FC<ThreeJSViewerProps> = ({ shapes }) => {
           const startPosition = convertTo3DCoords(shape.x, shape.y)
           const endPosition = convertTo3DCoords(shape.endX!, shape.endY!)
           const lineCurve = new THREE.LineCurve3(startPosition, endPosition)
-          geometry = new THREE.TubeGeometry(lineCurve, 10, 2, 8, false)
+          geometry = new THREE.TubeGeometry(lineCurve, 10, thickness, 8, false)
           material = new THREE.MeshPhongMaterial({ color: shape?.strokeColor ?? 0x000000 })
           mesh = new THREE.Mesh(geometry, material)
           break
@@ -84,7 +87,7 @@ const ThreeJSViewer: React.FC<ThreeJSViewerProps> = ({ shapes }) => {
           if (shape.points && shape.points.length > 1) {
             const pathPoints = shape.points.map(point => convertTo3DCoords(point.x, point.y))
             const curve = new THREE.CatmullRomCurve3(pathPoints)
-            geometry = new THREE.TubeGeometry(curve, 64, 25, 8, true)
+            geometry = new THREE.TubeGeometry(curve, 64, thickness, 8, false)
             material = new THREE.MeshPhongMaterial({ color: shape.strokeColor || 0x000000 })
             mesh = new THREE.Mesh(geometry, material)
           } else {
