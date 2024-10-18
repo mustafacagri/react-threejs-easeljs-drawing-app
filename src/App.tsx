@@ -28,6 +28,8 @@ const Canvas: React.FC = () => {
 
   const toggleViewMode = () => setIs3DMode(!is3DMode)
 
+  const getStrokeThickness = (thickness?: number) => thickness ?? pathThickness
+
   // Function to handle shape creation
   const createShape = useCallback(
     (props: ShapeInterface) => {
@@ -48,13 +50,13 @@ const Canvas: React.FC = () => {
           if (props.endX === undefined || props.endY === undefined) return
 
           g.beginStroke(props.strokeColor)
-            .setStrokeStyle(props?.thickness ?? pathThickness)
+            .setStrokeStyle(getStrokeThickness(props?.thickness))
             .moveTo(0, 0)
             .lineTo(props.endX - props.x, props.endY - props.y)
           break
         case 'path':
           if (props?.points && props.points?.length > 1) {
-            g.beginStroke(props.strokeColor).setStrokeStyle(props?.thickness ?? pathThickness)
+            g.beginStroke(props.strokeColor).setStrokeStyle(getStrokeThickness(props?.thickness))
             g.moveTo(props.points[0].x, props.points[0].y)
 
             props.points.forEach((point: { x: number; y: number }, index: number) => {
@@ -102,7 +104,7 @@ const Canvas: React.FC = () => {
           const g = this.graphics
           g.clear()
             .beginStroke(props.strokeColor)
-            .setStrokeStyle(props?.thickness ?? pathThickness)
+            .setStrokeStyle(getStrokeThickness(props?.thickness))
             .moveTo(0, 0)
             .lineTo(props.endX - props.x, props.endY - props.y)
         } else if (props.type === 'path' && props.points) {
